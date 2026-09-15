@@ -4,10 +4,11 @@ const bars = Array.from({ length: 42 }, (_, index) => index)
 const statusLabel: Record<RadioStatus, string> = { idle: 'STANDBY', generating: 'GENERATING', buffering: 'BUFFERING', playing: 'NOW ON AIR', paused: 'PAUSED', stopped: 'OFF AIR', error: 'ERROR' }
 const pad = (value: number) => String(value).padStart(2, '0')
 
-interface Props { status: RadioStatus; line: Line | null; programTitle: string; segmentTitle: string; elapsed: number; onStart: () => void; onStop: () => void; onPause: () => void; onNext: () => void; onContinue: () => void }
+interface Props { status: RadioStatus; line: Line | null; programTitle: string; segmentTitle: string; elapsed: number; onStart: () => void; onStop: () => void; onPause: () => void; onNext: () => void; onContinue: () => void; onChangeTopic: () => void }
 
-export function RadioConsole({ status, line, programTitle, segmentTitle, elapsed, onStart, onStop, onPause, onNext, onContinue }: Props) {
+export function RadioConsole({ status, line, programTitle, segmentTitle, elapsed, onStart, onStop, onPause, onNext, onContinue, onChangeTopic }: Props) {
   const active = status === 'playing'; const canControl = active || status === 'paused' || status === 'generating' || status === 'buffering'
+  const canNavigate = status === 'playing' || status === 'paused'
   const time = `${pad(Math.floor(elapsed / 3600))}:${pad(Math.floor(elapsed / 60) % 60)}:${pad(elapsed % 60)}`
   return (
     <section className="console overflow-hidden rounded-[28px] border border-white/10" aria-label="放送コンソール">
@@ -26,9 +27,10 @@ export function RadioConsole({ status, line, programTitle, segmentTitle, elapsed
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           {!canControl && <button onClick={onStart} className="primary-control" type="button"><span aria-hidden="true">▶</span> 放送を開始</button>}
-          {canControl && <button onClick={onPause} className="primary-control" type="button"><span aria-hidden="true">{status === 'paused' ? '▶' : 'Ⅱ'}</span> {status === 'paused' ? '再開' : '一時停止'}</button>}
-          <button onClick={onNext} disabled={!canControl} className="secondary-control" type="button">次の話題 <span aria-hidden="true">→</span></button>
-          <button onClick={onContinue} disabled={!canControl} className="secondary-control hidden sm:block" type="button">この話題を続ける</button>
+          {canControl && <button onClick={onPause} disabled={!canNavigate} className="primary-control" type="button"><span aria-hidden="true">{status === 'paused' ? '▶' : status === 'playing' ? 'Ⅱ' : '…'}</span> {status === 'paused' ? '再開' : status === 'playing' ? '一時停止' : '準備中'}</button>}
+          <button onClick={onNext} disabled={!canNavigate} className="secondary-control" type="button">次の話題 <span aria-hidden="true">→</span></button>
+          <button onClick={onContinue} disabled={!canNavigate} className="secondary-control" type="button">この話題を続ける</button>
+          <button onClick={onChangeTopic} disabled={!canControl} className="secondary-control" type="button">別の話題へ</button>
           <button onClick={onStop} disabled={!canControl} className="secondary-control ml-auto" type="button"><span aria-hidden="true">■</span> 終了</button>
         </div>
       </div>

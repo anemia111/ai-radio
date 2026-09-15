@@ -1,26 +1,43 @@
 import type { Speaker } from '../types/radio'
 
 export interface SpeakOptions { speaker: Speaker; voiceURI: string; volume: number; onStart?: () => void; onEnd?: () => void }
+export interface TTSProvider { readonly name: string; readonly available: boolean; getVoices(): SpeechSynthesisVoice[]; speak(text: string, options: SpeakOptions): Promise<void>; pause(): void; resume(): void; cancel(): void }
 
-export class BrowserSpeechProvider {
-  private pending?: () => void
+export class BrowserSpeechProvider implements TTSProvider {
+  readonly name = 'Browser Speech'
+  private pending?: { resolve: () => void; finish: () => void }
   get available() { return typeof window !== 'undefined' && 'speechSynthesis' in window }
   getVoices() { return this.available ? window.speechSynthesis.getVoices().filter((voice) => voice.lang.toLowerCase().startsWith('ja')) : [] }
   speak(text: string, options: SpeakOptions) {
     if (!this.available) return new Promise<void>((resolve) => { options.onStart?.(); window.setTimeout(() => { options.onEnd?.(); resolve() }, Math.max(1200, text.length * 70)) })
     return new Promise<void>((resolve, reject) => {
-      this.pending = resolve
+      const finish = () => options.onEnd?.()
+      this.pending = { resolve, finish }
       const utterance = new SpeechSynthesisUtterance(text)
       const voice = window.speechSynthesis.getVoices().find((item) => item.voiceURI === options.voiceURI)
       if (voice) utterance.voice = voice
       utterance.lang = voice?.lang ?? 'ja-JP'; utterance.volume = options.volume; utterance.rate = options.speaker === 'A' ? 0.96 : 1.04; utterance.pitch = options.speaker === 'A' ? 0.92 : 1.08
       utterance.onstart = () => options.onStart?.()
-      utterance.onend = () => { this.pending = undefined; options.onEnd?.(); resolve() }
-      utterance.onerror = (event) => { this.pending = undefined; options.onEnd?.(); if (event.error === 'canceled' || event.error === 'interrupted') resolve(); else reject(new Error(event.error)) }
+      utterance.onend = () => { this.pending = undefined; finish(); resolve() }
+      utterance.onerror = (event) => { this.pending = undefined; finish(); if (event.error === 'canceled' || event.error === 'interrupted') resolve(); else reject(new Error(event.error)) }
       window.speechSynthesis.speak(utterance)
     })
   }
   pause() { if (this.available) window.speechSynthesis.pause() }
   resume() { if (this.available) window.speechSynthesis.resume() }
-  cancel() { this.pending?.(); this.pending = undefined; if (this.available) window.speechSynthesis.cancel() }
+  cancel() { this.pending?.finish(); this.pending?.resolve(); this.pending = undefined; if (this.available) window.speechSynthesis.cancel() }
+}
+
+export class KokoroProvider implements TTSProvider {
+  readonly name = 'Kokoro'; readonly available = false
+  getVoices() { return [] }
+  async speak() { throw new Error('Kokoro TTS is not configured') }
+  pause() {} resume() {} cancel() {}
+}
+
+export class ExternalTTSProvider implements TTSProvider {
+  readonly name = 'External TTS'; readonly available = false
+  getVoices() { return [] }
+  async speak() { throw new Error('External TTS is not configured') }
+  pause() {} resume() {} cancel() {}
 }

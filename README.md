@@ -6,7 +6,7 @@
 
 ## 主な機能
 
-- APIキーなしで動くF1・ゲーム・テクノロジー・雑談・深夜ラジオのDemo番組
+- APIキーなしで動くF1・ゲーム・テクノロジー・スポーツ・アニメ・勉強・雑談・深夜ラジオのDemo番組
 - Web Speech APIによるDJ A / DJ Bの交互読み上げと個別音声選択
 - 20〜60秒単位の会話セグメント、次セグメントの先読み、直近履歴の引き継ぎ
 - Web Audio APIで生成する権利問題のないBGMとジングル、発話中の自動ダッキング
@@ -35,8 +35,7 @@ npm run dev
 表示されたURL（通常は `http://localhost:5173/ai-radio/`）を開きます。本番ビルドは次のとおりです。
 
 ```bash
-npm run lint
-npm run build
+npm run check
 npm run preview
 ```
 
@@ -48,7 +47,7 @@ npm run preview
 
 ## GitHub Pages と GitHub Actions
 
-`.github/workflows/deploy-pages.yml` が `main` へのpushでcheckout、Node.js準備、`npm ci`、`npm run build`、artifact upload、`github-pages` environmentへのデプロイを自動実行します。
+`.github/workflows/deploy-pages.yml` が `main` へのpushでcheckout、Node.js準備、`npm ci`、`npm run check`（lint・単体テスト・Worker型検査・本番ビルド）、artifact upload、`github-pages` environmentへのデプロイを自動実行します。
 
 リポジトリの **Settings → Pages → Build and deployment → Source** が **GitHub Actions** になっていることを確認してください。workflowには `contents: read`、`pages: write`、`id-token: write` のみを付与しています。リポジトリ名を変える場合は `vite.config.ts` の `base` と本READMEのURLも変更してください。
 
@@ -88,15 +87,15 @@ Geminiを使う場合は `AI_PROVIDER = "gemini"` に変更します。APIキー
 npm run deploy
 ```
 
-発行された `https://...workers.dev` URLを、アプリの **SOUND & CONNECTION → Cloudflare Worker URL** に入力します。Workerは `POST /api/generate` と `GET /api/rss` を提供し、origin確認、入力長制限、簡易レート制限、JSON検証を行います。
+発行された `https://...workers.dev` URLを、アプリの **SOUND & CONNECTION → Cloudflare Worker URL** に入力します。Workerは `POST /api/generate` と `GET /api/rss` を提供し、origin確認、入力・出力長制限、Cloudflare Rate Limiting、AI応答スキーマ検証を行います。RSSは公開HTTP(S)フィードのみを対象とし、ローカルアドレス、資格情報付きURL、任意ポートを拒否します。対象ドメインを限定したい場合は `RSS_ALLOWED_HOSTS` にカンマ区切りで設定してください。
 
 ## BGMとジングル
 
-初期版はWeb Audio APIで穏やかなBGMと3音のStation IDを端末内生成するため、音源ファイル不要です。使用許諾済み音源はBGMなら `public/audio/bgm/`、ジングルなら `public/audio/jingles/` に置けます。市販曲や利用許諾が不明な音源は同梱しないでください。音声ファイル参照には `import.meta.env.BASE_URL` を使うとPagesのサブディレクトリでも壊れません。
+音源が未登録のときはWeb Audio APIで穏やかなBGMと3音のStation IDを端末内生成するため、追加ファイルなしで動きます。使用許諾済み音源はBGMなら `public/audio/bgm/`、ジングルなら `public/audio/jingles/` に置き、`public/audio/catalog.json` に相対パスを登録してください。読み込みに失敗した場合も生成音へ戻ります。市販曲や利用許諾が不明な音源は同梱しないでください。
 
 ## RSS
 
-ニュースモードでRSS URLを登録できます。ブラウザから直接取得できるフィードはそのまま利用し、CORS制限がある場合はWorker URLも設定してください。取得対象はタイトル、概要、URL、公開日時です。RSS失敗時も通常放送を続けます。
+ニュースモードでRSS URLを登録できます。ブラウザから直接取得できるフィードはそのまま利用し、CORS制限がある場合はWorker URLも設定してください。取得対象はタイトル、概要、URL、公開日時で、Demo Modeでも取得記事を番組へ反映します。サイズ上限、タイムアウト、XML解析エラーを検査し、RSS失敗時も通常放送を続けます。
 
 ## PWA
 
@@ -113,7 +112,7 @@ npm run deploy
 
 ## セキュリティ
 
-フロントエンドには秘密鍵を含めません。ユーザー入力はReactのテキストとして描画します。Workerは許可origin、入力長、リクエスト頻度、AI応答形式を検証します。大規模運用ではCloudflare Rate LimitingまたはTurnstileの追加を推奨します。
+フロントエンドには秘密鍵を含めません。ユーザー入力はReactのテキストとして描画します。Workerは許可origin、入力・出力長、リクエスト頻度、AI応答形式を検証します。RSS取得はリダイレクト先も毎回検査し、プライベートネットワークを指すURLを拒否します。さらに公開規模を拡大する場合はTurnstileやCloudflare WAFの追加を検討してください。
 
 ## ライセンス
 

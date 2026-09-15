@@ -1,4 +1,5 @@
-const VERSION = 'ai-radio-v1'
-self.addEventListener('install', (event) => { event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(['./', './manifest.webmanifest', './favicon.svg']))); self.skipWaiting() })
+const VERSION = 'ai-radio-v2'
+self.addEventListener('install', (event) => { event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(['./', './manifest.webmanifest', './favicon.svg', './icon-192.png', './icon-512.png', './audio/catalog.json']))); self.skipWaiting() })
 self.addEventListener('activate', (event) => { event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== VERSION).map((key) => caches.delete(key))))); self.clients.claim() })
-self.addEventListener('fetch', (event) => { if (event.request.method !== 'GET') return; event.respondWith(fetch(event.request).then((response) => { const copy = response.clone(); caches.open(VERSION).then((cache) => cache.put(event.request, copy)); return response }).catch(() => caches.match(event.request).then((cached) => cached || caches.match('./')))) })
+self.addEventListener('fetch', (event) => { if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return; event.respondWith(fetch(event.request).then((response) => { if (response.ok) { const copy = response.clone(); event.waitUntil(caches.open(VERSION).then((cache) => cache.put(event.request, copy))) }; return response }).catch(async () => (await caches.match(event.request)) || (event.request.mode === 'navigate' ? caches.match('./') : Response.error()))) })
+self.addEventListener('message', (event) => { if (event.data === 'SKIP_WAITING') self.skipWaiting() })

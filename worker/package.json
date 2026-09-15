@@ -2,6 +2,6 @@
   "name": "ai-radio-worker",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "wrangler dev", "deploy": "wrangler deploy" },
-  "devDependencies": { "wrangler": "^4.40.0" }
+  "scripts": { "dev": "wrangler dev", "typecheck": "tsc -p tsconfig.json", "deploy": "wrangler deploy" },
+  "devDependencies": { "@cloudflare/workers-types": "^5.20260915.1", "typescript": "~6.0.2", "wrangler": "^4.131.2" }
 }

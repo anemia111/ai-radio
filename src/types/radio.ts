@@ -13,6 +13,7 @@ export interface GenerateInput {
   segmentIndex: number
   talkBalance: number
   rssItems?: RssItem[]
+  direction?: 'continue' | 'next' | 'fresh'
 }
 
 export interface RssItem { title: string; summary?: string; url?: string; publishedAt?: string }
