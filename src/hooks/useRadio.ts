@@ -22,7 +22,10 @@ export function useRadio() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const settingsRef = useRef(settings); const sessionRef = useRef(0); const commandRef = useRef<'continue' | 'next' | null>(null); const historyRef = useRef<HistoryLine[]>([])
 
-  const setSettings = useCallback((patch: Partial<RadioSettings>) => setSettingsState((current) => ({ ...current, ...patch })), [])
+  const setSettings = useCallback((patch: Partial<RadioSettings>) => {
+    settingsRef.current = { ...settingsRef.current, ...patch }
+    setSettingsState((current) => ({ ...current, ...patch }))
+  }, [])
   useEffect(() => { settingsRef.current = settings; saveSettings(settings); audio.setBgmVolume(settings.bgmVolume, status === 'playing') }, [settings, status])
   useEffect(() => { const update = () => setVoices(tts.getVoices()); update(); if ('speechSynthesis' in window) window.speechSynthesis.addEventListener('voiceschanged', update); return () => window.speechSynthesis?.removeEventListener('voiceschanged', update) }, [])
   useEffect(() => { if (status !== 'playing') return; const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000); return () => window.clearInterval(timer) }, [status])
@@ -86,6 +89,7 @@ export function useRadio() {
 
   const start = useCallback(() => {
     const topic = settingsRef.current.topic.trim() || '今夜の気になること'
+    settingsRef.current = { ...settingsRef.current, topic }
     setSettingsState((current) => ({ ...current, topic, recentTopics: [topic, ...current.recentTopics.filter((item) => item !== topic)].slice(0, 6) }))
     sessionRef.current += 1; commandRef.current = null; tts.cancel(); void playSession(sessionRef.current)
   }, [playSession])

@@ -20,24 +20,21 @@ async function isRateLimited(request: Request, env: Env, route: string) {
 function buildPrompt(input: GenerateInput) {
   const balance = input.talkBalance < -25 ? 'DJ Aを多め' : input.talkBalance > 25 ? 'DJ Bを多め' : 'ほぼ均等'
   const direction = input.direction === 'continue' ? '直前の話題をさらに掘り下げる' : input.direction === 'next' ? '重複を避けて自然な次の小話題へ進む' : '自然に番組を始める'
-  const selectedNews = input.mode === 'news' && input.rssItems.length ? input.rssItems[input.segmentIndex % input.rssItems.length] : undefined
   const newsRule = input.mode === 'news'
-    ? selectedNews
-      ? 'ニュース番組です。挨拶・番組紹介・前フリは禁止。1発言目からNEWS_ITEMの見出しを述べ、概要にある具体的事実（誰が・何を・いつ・どこで等）を2発言以上で伝えてください。感想や一般論だけにせず、概要にない事実は足さないでください。'
+    ? input.rssItems.length
+      ? 'ニュース番組です。NEWS_ITEMSからBROADCAST_REQUESTに最も合う記事を選んでください。一般的なニュース依頼なら新しく未紹介の記事を選びます。特定テーマの依頼に合う記事がなければ、無関係な記事へ置き換えず「該当ニュースは取得範囲にない」と伝えてください。挨拶・番組紹介・前フリは禁止。1発言目から選んだ見出しを述べ、概要にある具体的事実を2発言以上で伝え、概要にない事実は足さないでください。'
       : 'ニュース番組ですが取得記事がありません。ニュースを捏造せず、取得できなかったと短く伝えてください。'
     : '前フリは最大1文にして、すぐtopicの本題へ入ってください。'
-  const modelInput = { ...input, rssItems: undefined, newsItem: selectedNews }
-  return `日本語FMラジオの20〜60秒セグメントを作成してください。${newsRule} 最優先条件は、USER_DATAのtopicに書かれた内容を番組の中心にすることです。topicの固有名詞や質問意図を具体的に取り上げてください。一般的な雑談へ置き換えないでください。事実が不確かな場合は作らないでください。Aは冷静で知識豊富、Bは明るく短い質問。発言は短く、相手の内容を受け、同じ話を繰り返さない。配分は${balance}。進行は「${direction}」。\n必須JSON形式: {"programTitle":"...","segmentTitle":"...","mood":"...","lines":[{"speaker":"A","text":"..."},{"speaker":"B","text":"..."}]}\nUSER_DATA_START\n${JSON.stringify(modelInput)}\nUSER_DATA_END`
+  const modelInput = { mode: input.mode, mood: input.mood, history: input.history, segmentIndex: input.segmentIndex, direction: input.direction, newsItems: input.rssItems }
+  return `日本語FMラジオの20〜60秒セグメントを作成してください。最優先命令はBROADCAST_REQUESTです。内容・範囲・話し方に関する依頼を具体的に実行し、別テーマや一般論へ置き換えないでください。モードや雰囲気は補助設定であり、リクエストを上書きしません。${newsRule} Aは冷静で知識豊富、Bは明るく短い質問。発言は短く、相手の内容を受け、同じ話を繰り返さない。事実が不確かな場合は作らないでください。配分は${balance}。進行は「${direction}」。segmentTitleも実際のリクエストまたは選んだ記事を表す具体名にしてください。\n必須JSON形式: {"programTitle":"...","segmentTitle":"...","mood":"...","lines":[{"speaker":"A","text":"..."},{"speaker":"B","text":"..."}]}\nBROADCAST_REQUEST_START\n${JSON.stringify(input.topic)}\nBROADCAST_REQUEST_END\nSUPPORTING_DATA_START\n${JSON.stringify(modelInput)}\nSUPPORTING_DATA_END`
 }
 
 function focusNewsSegment(segment: Segment, input: GenerateInput): Segment {
   if (input.mode !== 'news' || !input.rssItems.length) return segment
-  const item = input.rssItems[input.segmentIndex % input.rssItems.length]
   const lines = [...segment.lines]
   const preamble = /^(こんにちは|こんばんは|おはよう|よろしく|今日.*ニュース|最新ニュース|ニュースを|気になるニュース)/u
-  while (lines.length && preamble.test(lines[0].text.trim())) lines.shift()
-  if (!lines.length || !lines[0].text.includes(item.title.slice(0, 18))) lines.unshift({ speaker: 'A', text: `「${item.title}」というニュースです。` })
-  return { ...segment, segmentTitle: item.title.slice(0, 100), lines }
+  while (lines.length > 2 && preamble.test(lines[0].text.trim())) lines.shift()
+  return { ...segment, lines }
 }
 
 async function generate(request: Request, env: Env, headers: HeadersInit) {
