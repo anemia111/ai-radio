@@ -20,7 +20,24 @@ async function isRateLimited(request: Request, env: Env, route: string) {
 function buildPrompt(input: GenerateInput) {
   const balance = input.talkBalance < -25 ? 'DJ Aを多め' : input.talkBalance > 25 ? 'DJ Bを多め' : 'ほぼ均等'
   const direction = input.direction === 'continue' ? '直前の話題をさらに掘り下げる' : input.direction === 'next' ? '重複を避けて自然な次の小話題へ進む' : '自然に番組を始める'
-  return `日本語FMラジオの20〜60秒セグメントを作成してください。最優先条件は、USER_DATAのtopicに書かれた内容を番組の中心にすることです。topicの固有名詞や質問意図を具体的に取り上げ、少なくとも2発言で直接触れてください。一般的な雑談へ置き換えないでください。事実が不確かな場合は作らず、観点や問いとして扱ってください。Aは冷静で知識豊富、Bは明るく質問と軽い冗談。発言は短く、相手の内容を受け、同じ話を繰り返さない。配分は${balance}。進行は「${direction}」。RSSは記事本文ではなく見出しと概要だけを要約し、断定しすぎず配信元確認を促す。\n必須JSON形式: {"programTitle":"...","segmentTitle":"...","mood":"...","lines":[{"speaker":"A","text":"..."},{"speaker":"B","text":"..."}]}\nUSER_DATA_START\n${JSON.stringify(input)}\nUSER_DATA_END`
+  const selectedNews = input.mode === 'news' && input.rssItems.length ? input.rssItems[input.segmentIndex % input.rssItems.length] : undefined
+  const newsRule = input.mode === 'news'
+    ? selectedNews
+      ? 'ニュース番組です。挨拶・番組紹介・前フリは禁止。1発言目からNEWS_ITEMの見出しを述べ、概要にある具体的事実（誰が・何を・いつ・どこで等）を2発言以上で伝えてください。感想や一般論だけにせず、概要にない事実は足さないでください。'
+      : 'ニュース番組ですが取得記事がありません。ニュースを捏造せず、取得できなかったと短く伝えてください。'
+    : '前フリは最大1文にして、すぐtopicの本題へ入ってください。'
+  const modelInput = { ...input, rssItems: undefined, newsItem: selectedNews }
+  return `日本語FMラジオの20〜60秒セグメントを作成してください。${newsRule} 最優先条件は、USER_DATAのtopicに書かれた内容を番組の中心にすることです。topicの固有名詞や質問意図を具体的に取り上げてください。一般的な雑談へ置き換えないでください。事実が不確かな場合は作らないでください。Aは冷静で知識豊富、Bは明るく短い質問。発言は短く、相手の内容を受け、同じ話を繰り返さない。配分は${balance}。進行は「${direction}」。\n必須JSON形式: {"programTitle":"...","segmentTitle":"...","mood":"...","lines":[{"speaker":"A","text":"..."},{"speaker":"B","text":"..."}]}\nUSER_DATA_START\n${JSON.stringify(modelInput)}\nUSER_DATA_END`
+}
+
+function focusNewsSegment(segment: Segment, input: GenerateInput): Segment {
+  if (input.mode !== 'news' || !input.rssItems.length) return segment
+  const item = input.rssItems[input.segmentIndex % input.rssItems.length]
+  const lines = [...segment.lines]
+  const preamble = /^(こんにちは|こんばんは|おはよう|よろしく|今日.*ニュース|最新ニュース|ニュースを|気になるニュース)/u
+  while (lines.length && preamble.test(lines[0].text.trim())) lines.shift()
+  if (!lines.length || !lines[0].text.includes(item.title.slice(0, 18))) lines.unshift({ speaker: 'A', text: `「${item.title}」というニュースです。` })
+  return { ...segment, segmentTitle: item.title.slice(0, 100), lines }
 }
 
 async function generate(request: Request, env: Env, headers: HeadersInit) {
@@ -30,7 +47,7 @@ async function generate(request: Request, env: Env, headers: HeadersInit) {
   try {
     const backend = createAIBackend(env); const prompt = buildPrompt(input); let raw = await backend.generate(prompt); let segment: Segment
     try { segment = normalizeSegment(parseModelJson(raw)) } catch { raw = await backend.generate(prompt, raw); segment = normalizeSegment(parseModelJson(raw)) }
-    return json(segment, 200, headers)
+    return json(focusNewsSegment(segment, input), 200, headers)
   } catch (error) { return json({ error: errorCode(error) }, errorCode(error) === 'provider_secret_missing' ? 503 : 502, headers) }
 }
 

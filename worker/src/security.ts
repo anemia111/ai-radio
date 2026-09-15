@@ -52,7 +52,9 @@ async function readLimitedText(response: Response) {
 export async function fetchPublicFeed(rawUrl: string, allowedHosts = '') {
   let current = parseSafeFeedUrl(rawUrl, allowedHosts)
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
-    await assertPublicDns(current.hostname)
+    // Cloudflare Workers cannot reliably use node:dns. A configured hostname
+    // allowlist is the production SSRF boundary, including for redirects.
+    if (!allowedHosts.trim()) await assertPublicDns(current.hostname)
     const response = await fetch(current.toString(), { headers: { 'user-agent': 'AI-Radio-RSS/2.0', accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, text/plain' }, redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('location'); if (!location || redirect === MAX_REDIRECTS) throw new Error('redirect_blocked')

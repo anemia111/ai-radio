@@ -33,10 +33,16 @@ export function useRadio() {
     try {
       setElapsed(0); setHistory([]); historyRef.current = []; setCurrentLine(null); setStatus('generating'); setNotice('最初のセグメントを準備しています…')
       await audio.start(firstSettings.bgmVolume, import.meta.env.BASE_URL); audio.playJingle(firstSettings.jingleVolume)
-      let rssItems: RssItem[] = []
-      if (firstSettings.mode === 'news' && firstSettings.rssUrl) {
-        try { rssItems = await fetchRss(firstSettings.rssUrl, firstSettings.workerUrl) } catch { setNotice('RSSは取得できませんでした。通常の放送を続けます。') }
+      const latestNews = async (current: RadioSettings, fallback: RssItem[] = []) => {
+        if (current.mode !== 'news' || !current.rssUrl) return []
+        try {
+          const items = await fetchRss(current.rssUrl, current.workerUrl)
+          if (items.length) return items
+          setNotice('最新ニュースが0件でした。前回取得分があれば使用します。')
+        } catch { setNotice('最新ニュースを取得できませんでした。前回取得分があれば使用します。') }
+        return fallback
       }
+      let rssItems: RssItem[] = await latestNews(firstSettings)
       let index = 0
       const makeProvider = (events = { onPrimary: () => setProviderMode('ai' as const), onFallback: (message: string) => { setProviderMode('demo' as const); setNotice(message) } }) => {
         const current = settingsRef.current
@@ -45,13 +51,18 @@ export function useRadio() {
       }
       let segment: Segment = await makeProvider().generate({ ...firstSettings, history: [], segmentIndex: index, rssItems })
       if (sessionRef.current === session) {
-        try { await tts.speak('AI RADIO 98.7。あなたのための放送を始めます。', { speaker: 'A', voiceURI: settingsRef.current.voiceA, volume: settingsRef.current.jingleVolume, mood: settingsRef.current.mood, onStart: () => audio.duck(true), onEnd: () => audio.duck(false) }) } catch { /* tone jingle remains available */ }
+        const opening = firstSettings.mode === 'news' ? '最新ニュースです。' : 'AIラジオ、スタート。'
+        try { await tts.speak(opening, { speaker: 'A', voiceURI: settingsRef.current.voiceA, volume: settingsRef.current.jingleVolume, mood: settingsRef.current.mood, onStart: () => audio.duck(true), onEnd: () => audio.duck(false) }) } catch { /* tone jingle remains available */ }
       }
       while (sessionRef.current === session) {
         setProgramTitle(segment.programTitle); setSegmentTitle(segment.segmentTitle); setStatus('buffering')
         const nextIndex = index + 1
         const nextController = new AbortController(); let nextMode: 'demo' | 'ai' | undefined; let nextNotice = ''
-        const nextPromise = makeProvider({ onPrimary: () => { nextMode = 'ai' }, onFallback: (message) => { nextMode = 'demo'; nextNotice = message } }).generate({ ...settingsRef.current, history: historyRef.current.slice(-16), segmentIndex: nextIndex, rssItems, direction: 'next' }, nextController.signal)
+        const nextPromise = (async () => {
+          const current = settingsRef.current
+          rssItems = await latestNews(current, rssItems)
+          return makeProvider({ onPrimary: () => { nextMode = 'ai' }, onFallback: (message) => { nextMode = 'demo'; nextNotice = message } }).generate({ ...current, history: historyRef.current.slice(-16), segmentIndex: nextIndex, rssItems, direction: 'next' }, nextController.signal)
+        })()
         setStatus('playing'); if (!settingsRef.current.workerUrl) { setProviderMode('demo'); setNotice('Demo放送中 — Worker URLを設定するとAIモードになります。') }
         for (const line of segment.lines) {
           if (sessionRef.current !== session) break
@@ -65,6 +76,7 @@ export function useRadio() {
         const command = commandRef.current; commandRef.current = null; setStatus('generating')
         if (command) {
           nextController.abort(); await nextPromise.catch(() => undefined)
+          rssItems = await latestNews(settingsRef.current, rssItems)
           segment = await makeProvider().generate({ ...settingsRef.current, history: historyRef.current.slice(-16), segmentIndex: nextIndex, rssItems, direction: command })
         } else { segment = await nextPromise; if (nextMode) setProviderMode(nextMode); if (nextNotice) setNotice(nextNotice) }
         index = nextIndex; audio.playJingle(settingsRef.current.jingleVolume); setStatus('playing')

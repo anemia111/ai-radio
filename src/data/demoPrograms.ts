@@ -60,10 +60,9 @@ export function createDemoSegment(input: GenerateInput): Segment {
   if (input.mode === 'news' && input.rssItems?.length) {
     const item = input.rssItems[input.segmentIndex % input.rssItems.length]
     return { programTitle: 'AI RADIO NEWSROOM', segmentTitle: item.title.slice(0, 80), mood: input.mood, lines: [
-      { speaker: 'A', text: `最初の話題です。「${item.title.slice(0, 100)}」というニュースが入っています。` },
-      { speaker: 'B', text: item.summary ? `${item.summary.slice(0, 180)}。ここから何が変わるのか気になりますね。` : '見出しだけでも気になる話題です。背景を少し考えてみましょう。' },
-      { speaker: 'A', text: '記事の詳細は配信元で確認しつつ、ここでは要点と影響を整理します。' },
-      { speaker: 'B', text: '次のニュースへ行く前に、自分たちの生活との接点も探してみたいですね。' },
+      { speaker: 'A', text: `「${item.title.slice(0, 120)}」というニュースです。` },
+      { speaker: 'B', text: item.summary ? item.summary.slice(0, 220) : '現在取得できたのは見出しまでです。' },
+      { speaker: 'A', text: item.publishedAt ? `配信日時は${item.publishedAt}。詳しくは配信元の記事をご確認ください。` : '詳しくは配信元の記事をご確認ください。' },
     ] }
   }
   const bank = selectBank(input)

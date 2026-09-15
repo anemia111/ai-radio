@@ -6,6 +6,7 @@ export function loadSettings(): RadioSettings {
     const migrated = { ...defaultSettings, ...saved }
     if (saved.voiceSelectionVersion !== 2) Object.assign(migrated, { voiceA: '', voiceB: '', voiceSelectionVersion: 2 })
     if (saved.connectionVersion !== 1) Object.assign(migrated, { workerUrl: defaultSettings.workerUrl, provider: 'auto', connectionVersion: 1 })
+    if (saved.newsFeedVersion !== 1) Object.assign(migrated, { rssUrl: defaultSettings.rssUrl, newsFeedVersion: 1 })
     return migrated
   } catch { return defaultSettings }
 }

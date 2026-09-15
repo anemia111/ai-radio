@@ -7,7 +7,7 @@ preview_urls = false
 [vars]
 AI_PROVIDER = "gemini"
 ALLOWED_ORIGINS = "https://anemia111.github.io,http://localhost:5173,http://127.0.0.1:5173"
-RSS_ALLOWED_HOSTS = ""
+RSS_ALLOWED_HOSTS = "www3.nhk.or.jp,feeds.bbci.co.uk,www.nippon.com"
 
 [[ratelimits]]
 name = "RATE_LIMITER"

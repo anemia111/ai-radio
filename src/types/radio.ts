@@ -26,6 +26,7 @@ export interface RadioSettings {
   voiceB: string
   voiceSelectionVersion: number
   connectionVersion: number
+  newsFeedVersion: number
   djVolume: number
   bgmVolume: number
   jingleVolume: number
@@ -38,7 +39,7 @@ export interface RadioSettings {
 }
 
 export const defaultSettings: RadioSettings = {
-  topic: 'F1について、ゆるく話して', mode: 'free-talk', mood: 'relaxed', voiceA: '', voiceB: '', voiceSelectionVersion: 2, connectionVersion: 1,
+  topic: 'F1について、ゆるく話して', mode: 'free-talk', mood: 'relaxed', voiceA: '', voiceB: '', voiceSelectionVersion: 2, connectionVersion: 1, newsFeedVersion: 1,
   djVolume: 0.9, bgmVolume: 0.22, jingleVolume: 0.45, talkBalance: 0, workerUrl: 'https://ai-radio-worker.yuuki-ai-radio.workers.dev', provider: 'auto',
-  rssUrl: '', recentTopics: [], favorites: [],
+  rssUrl: 'https://feeds.bbci.co.uk/japanese/rss.xml', recentTopics: [], favorites: [],
 }
