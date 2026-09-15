@@ -28,7 +28,7 @@ export class BrowserSpeechProvider implements TTSProvider {
       const voice = this.selectVoice(options.voiceURI, options.speaker)
       if (voice) utterance.voice = voice
       const pace = options.mood === 'energetic' ? 0.04 : options.mood === 'midnight' || options.mood === 'calm' ? -0.04 : 0
-      utterance.lang = voice?.lang ?? 'ja-JP'; utterance.volume = options.volume; utterance.rate = (options.speaker === 'A' ? 1.02 : 1.06) + pace; utterance.pitch = options.speaker === 'A' ? 0.99 : 1.01
+      utterance.lang = voice?.lang ?? 'ja-JP'; utterance.volume = options.volume; utterance.rate = 1.3 + pace; utterance.pitch = options.speaker === 'A' ? 0.99 : 1.01
       utterance.onstart = () => options.onStart?.()
       utterance.onend = () => { this.pending = undefined; finish(); resolve() }
       utterance.onerror = (event) => { this.pending = undefined; finish(); if (event.error === 'canceled' || event.error === 'interrupted') resolve(); else reject(new Error(event.error)) }
