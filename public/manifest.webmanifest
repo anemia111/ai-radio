@@ -1,0 +1,12 @@
+{
+  "name": "AI RADIO 98.7",
+  "short_name": "AI RADIO",
+  "description": "2人のAI DJがあなたのテーマで語り合う、自分専用ラジオ。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090b0e",
+  "theme_color": "#090b0e",
+  "lang": "ja",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

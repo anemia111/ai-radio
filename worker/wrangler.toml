@@ -1,0 +1,7 @@
+name = "ai-radio-worker"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+
+[vars]
+AI_PROVIDER = "groq"
+ALLOWED_ORIGINS = "https://anemia111.github.io,http://localhost:5173,http://127.0.0.1:5173"
