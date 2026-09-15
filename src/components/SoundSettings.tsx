@@ -1,15 +1,16 @@
 import type { RadioSettings } from '../types/radio'
 
-interface Props { settings: RadioSettings; voices: SpeechSynthesisVoice[]; onChange: (patch: Partial<RadioSettings>) => void }
-const label = (voice: SpeechSynthesisVoice) => `${voice.name} (${voice.lang})`
+interface Props { settings: RadioSettings; voices: SpeechSynthesisVoice[]; onChange: (patch: Partial<RadioSettings>) => void; onPreview: (speaker: 'A' | 'B') => void; disabled: boolean }
+const label = (voice: SpeechSynthesisVoice) => `${voice.name} (${voice.lang})${!voice.localService || /natural|neural|online|premium/i.test(voice.name) ? '・高品質' : ''}`
 
-export function SoundSettings({ settings, voices, onChange }: Props) {
+export function SoundSettings({ settings, voices, onChange, onPreview, disabled }: Props) {
   return (
     <details className="panel group rounded-[24px] p-5 sm:p-6">
       <summary className="flex cursor-pointer list-none items-center justify-between"><span className="eyebrow">SOUND & CONNECTION</span><span className="text-slate-500 transition group-open:rotate-45">＋</span></summary>
       <div className="mt-5 space-y-5 border-t border-white/8 pt-5">
-        <label className="field-label">DJ A の声<select className="field-select" value={settings.voiceA} onChange={(event) => onChange({ voiceA: event.target.value })}>{voices.length ? voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{label(voice)}</option>) : <option value="">ブラウザ標準音声</option>}</select></label>
-        <label className="field-label">DJ B の声<select className="field-select" value={settings.voiceB} onChange={(event) => onChange({ voiceB: event.target.value })}>{voices.length ? voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{label(voice)}</option>) : <option value="">ブラウザ標準音声</option>}</select></label>
+        <VoiceField speaker="A" value={settings.voiceA} voices={voices} onChange={(voiceA) => onChange({ voiceA })} onPreview={() => onPreview('A')} disabled={disabled} />
+        <VoiceField speaker="B" value={settings.voiceB} voices={voices} onChange={(voiceB) => onChange({ voiceB })} onPreview={() => onPreview('B')} disabled={disabled} />
+        <p className="text-xs leading-5 text-slate-500">「自動」は利用できる日本語音声のうち、自然・オンライン・高品質な候補を優先します。</p>
         <Range label="DJ音量" value={settings.djVolume} onChange={(djVolume) => onChange({ djVolume })} />
         <Range label="BGM音量" value={settings.bgmVolume} onChange={(bgmVolume) => onChange({ bgmVolume })} />
         <Range label="ジングル音量" value={settings.jingleVolume} onChange={(jingleVolume) => onChange({ jingleVolume })} />
@@ -19,6 +20,10 @@ export function SoundSettings({ settings, voices, onChange }: Props) {
       </div>
     </details>
   )
+}
+
+function VoiceField({ speaker, value, voices, onChange, onPreview, disabled }: { speaker: 'A' | 'B'; value: string; voices: SpeechSynthesisVoice[]; onChange: (value: string) => void; onPreview: () => void; disabled: boolean }) {
+  return <div><label className="field-label" htmlFor={`voice-${speaker}`}>DJ {speaker} の声</label><div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2"><select id={`voice-${speaker}`} className="field-select mt-0" value={value} onChange={(event) => onChange(event.target.value)}><option value="">自動（自然な声を優先）</option>{voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{label(voice)}</option>)}</select><button className="option-button px-4" type="button" disabled={disabled} onClick={onPreview}>試聴</button></div></div>
 }
 
 function Range({ label: text, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {

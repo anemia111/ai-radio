@@ -21,7 +21,7 @@ export default function App() {
       </header>
       <div className="mx-auto grid max-w-[1380px] gap-5 px-5 pb-10 lg:grid-cols-[minmax(0,1.55fr)_minmax(310px,.65fr)] lg:px-8">
         <div className="space-y-5"><RadioConsole status={radio.status} line={radio.currentLine} programTitle={radio.programTitle} segmentTitle={radio.segmentTitle} elapsed={radio.elapsed} onStart={radio.start} onStop={radio.stop} onPause={radio.togglePause} onNext={radio.nextTopic} onContinue={radio.continueTopic} onChangeTopic={radio.changeTopic} /><Transcript lines={radio.history} /></div>
-        <aside className="space-y-5"><BroadcastSetup settings={radio.settings} onChange={radio.setSettings} onFavorite={radio.toggleFavorite} disabled={active} /><SoundSettings settings={radio.settings} voices={radio.voices} onChange={radio.setSettings} /><section className="station-note"><span aria-hidden="true">◉</span><p><strong>Always available.</strong><br />接続に失敗しても、Demo放送へ自動で切り替わります。</p></section></aside>
+        <aside className="space-y-5"><BroadcastSetup settings={radio.settings} onChange={radio.setSettings} onFavorite={radio.toggleFavorite} disabled={active} /><SoundSettings settings={radio.settings} voices={radio.voices} onChange={radio.setSettings} onPreview={radio.previewVoice} disabled={active} /><section className="station-note"><span aria-hidden="true">◉</span><p><strong>Always available.</strong><br />接続に失敗しても、Demo放送へ自動で切り替わります。</p></section></aside>
       </div>
       <footer className="mx-auto flex max-w-[1380px] flex-col justify-between gap-2 border-t border-white/8 px-5 py-6 text-xs text-slate-600 sm:flex-row lg:px-8"><span>AI RADIO 98.7 — Your frequency, your story.</span><span>Browser Speech • Local Settings • No tracking</span></footer>
     </main>

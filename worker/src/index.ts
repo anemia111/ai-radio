@@ -20,7 +20,7 @@ async function isRateLimited(request: Request, env: Env, route: string) {
 function buildPrompt(input: GenerateInput) {
   const balance = input.talkBalance < -25 ? 'DJ Aを多め' : input.talkBalance > 25 ? 'DJ Bを多め' : 'ほぼ均等'
   const direction = input.direction === 'continue' ? '直前の話題をさらに掘り下げる' : input.direction === 'next' ? '重複を避けて自然な次の小話題へ進む' : '自然に番組を始める'
-  return `日本語FMラジオの20〜60秒セグメントを作成してください。Aは冷静で知識豊富、Bは明るく質問と軽い冗談。発言は短く、相手の内容を受け、同じ話を繰り返さない。配分は${balance}。進行は「${direction}」。RSSは記事本文ではなく見出しと概要だけを要約し、断定しすぎず配信元確認を促す。\n必須JSON形式: {"programTitle":"...","segmentTitle":"...","mood":"...","lines":[{"speaker":"A","text":"..."},{"speaker":"B","text":"..."}]}\nUSER_DATA_START\n${JSON.stringify(input)}\nUSER_DATA_END`
+  return `日本語FMラジオの20〜60秒セグメントを作成してください。最優先条件は、USER_DATAのtopicに書かれた内容を番組の中心にすることです。topicの固有名詞や質問意図を具体的に取り上げ、少なくとも2発言で直接触れてください。一般的な雑談へ置き換えないでください。事実が不確かな場合は作らず、観点や問いとして扱ってください。Aは冷静で知識豊富、Bは明るく質問と軽い冗談。発言は短く、相手の内容を受け、同じ話を繰り返さない。配分は${balance}。進行は「${direction}」。RSSは記事本文ではなく見出しと概要だけを要約し、断定しすぎず配信元確認を促す。\n必須JSON形式: {"programTitle":"...","segmentTitle":"...","mood":"...","lines":[{"speaker":"A","text":"..."},{"speaker":"B","text":"..."}]}\nUSER_DATA_START\n${JSON.stringify(input)}\nUSER_DATA_END`
 }
 
 async function generate(request: Request, env: Env, headers: HeadersInit) {

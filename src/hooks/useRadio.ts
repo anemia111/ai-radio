@@ -24,7 +24,7 @@ export function useRadio() {
 
   const setSettings = useCallback((patch: Partial<RadioSettings>) => setSettingsState((current) => ({ ...current, ...patch })), [])
   useEffect(() => { settingsRef.current = settings; saveSettings(settings); audio.setBgmVolume(settings.bgmVolume, status === 'playing') }, [settings, status])
-  useEffect(() => { const update = () => { const found = tts.getVoices(); setVoices(found); if (found.length) setSettingsState((current) => ({ ...current, voiceA: current.voiceA || found[0].voiceURI, voiceB: current.voiceB || found[1]?.voiceURI || found[0].voiceURI })) }; update(); if ('speechSynthesis' in window) window.speechSynthesis.addEventListener('voiceschanged', update); return () => window.speechSynthesis?.removeEventListener('voiceschanged', update) }, [])
+  useEffect(() => { const update = () => setVoices(tts.getVoices()); update(); if ('speechSynthesis' in window) window.speechSynthesis.addEventListener('voiceschanged', update); return () => window.speechSynthesis?.removeEventListener('voiceschanged', update) }, [])
   useEffect(() => { if (status !== 'playing') return; const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000); return () => window.clearInterval(timer) }, [status])
   useEffect(() => () => { sessionRef.current += 1; tts.cancel(); audio.stop() }, [])
 
@@ -45,7 +45,7 @@ export function useRadio() {
       }
       let segment: Segment = await makeProvider().generate({ ...firstSettings, history: [], segmentIndex: index, rssItems })
       if (sessionRef.current === session) {
-        try { await tts.speak('AI RADIO 98.7。あなたのための放送を始めます。', { speaker: 'A', voiceURI: settingsRef.current.voiceA, volume: settingsRef.current.jingleVolume, onStart: () => audio.duck(true), onEnd: () => audio.duck(false) }) } catch { /* tone jingle remains available */ }
+        try { await tts.speak('AI RADIO 98.7。あなたのための放送を始めます。', { speaker: 'A', voiceURI: settingsRef.current.voiceA, volume: settingsRef.current.jingleVolume, mood: settingsRef.current.mood, onStart: () => audio.duck(true), onEnd: () => audio.duck(false) }) } catch { /* tone jingle remains available */ }
       }
       while (sessionRef.current === session) {
         setProgramTitle(segment.programTitle); setSegmentTitle(segment.segmentTitle); setStatus('buffering')
@@ -57,7 +57,7 @@ export function useRadio() {
           if (sessionRef.current !== session) break
           if (commandRef.current) break
           setCurrentLine(line)
-          try { await tts.speak(line.text, { speaker: line.speaker, voiceURI: line.speaker === 'A' ? settingsRef.current.voiceA : settingsRef.current.voiceB, volume: settingsRef.current.djVolume, onStart: () => audio.duck(true), onEnd: () => audio.duck(false) }) }
+          try { await tts.speak(line.text, { speaker: line.speaker, voiceURI: line.speaker === 'A' ? settingsRef.current.voiceA : settingsRef.current.voiceB, volume: settingsRef.current.djVolume, mood: settingsRef.current.mood, onStart: () => audio.duck(true), onEnd: () => audio.duck(false) }) }
           catch { setNotice('音声を再生できないため、字幕で放送を続けます。') }
           const item = { ...line, segmentTitle: segment.segmentTitle }; historyRef.current = [...historyRef.current, item].slice(-24); setHistory(historyRef.current)
         }
@@ -84,6 +84,7 @@ export function useRadio() {
   const continueTopic = useCallback(() => requestDirection('continue'), [requestDirection])
   const changeTopic = useCallback(() => { stop(); setStatus('idle'); setSegmentTitle('新しいテーマを入力してください'); setNotice('テーマを変更して、新しい放送を始められます。'); window.setTimeout(() => document.getElementById('topic')?.focus(), 0) }, [stop])
   const toggleFavorite = useCallback(() => { const topic = settingsRef.current.topic.trim(); if (!topic) return; setSettingsState((current) => ({ ...current, favorites: current.favorites.includes(topic) ? current.favorites.filter((item) => item !== topic) : [topic, ...current.favorites].slice(0, 12) })) }, [])
+  const previewVoice = useCallback((speaker: 'A' | 'B') => { if (status !== 'idle' && status !== 'stopped') return; tts.cancel(); void tts.speak(speaker === 'A' ? 'こんばんは。今夜のテーマを、ゆっくり一緒に見ていきましょう。' : 'こんばんは。気になる話を、楽しく掘り下げていきますね。', { speaker, voiceURI: speaker === 'A' ? settingsRef.current.voiceA : settingsRef.current.voiceB, volume: settingsRef.current.djVolume, mood: settingsRef.current.mood }) }, [status])
 
-  return { settings, setSettings, status, currentLine, programTitle, segmentTitle, history, notice, providerMode, elapsed, voices, start, stop, togglePause, nextTopic, continueTopic, changeTopic, toggleFavorite }
+  return { settings, setSettings, status, currentLine, programTitle, segmentTitle, history, notice, providerMode, elapsed, voices, start, stop, togglePause, nextTopic, continueTopic, changeTopic, toggleFavorite, previewVoice }
 }

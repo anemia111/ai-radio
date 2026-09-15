@@ -51,6 +51,11 @@ function selectBank(input: GenerateInput) {
   return banks.chat
 }
 
+function subjectFromTopic(topic: string) {
+  const subject = topic.replace(/[。！？!?]+$/g, '').replace(/(?:について)?[、,\s]*(?:ゆるく|詳しく|深く|楽しく|おすすめを)?[、,\s]*(?:話して|教えて|聞かせて|聞きたい)(?:ください)?$/u, '').trim()
+  return (subject || topic).slice(0, 60)
+}
+
 export function createDemoSegment(input: GenerateInput): Segment {
   if (input.mode === 'news' && input.rssItems?.length) {
     const item = input.rssItems[input.segmentIndex % input.rssItems.length]
@@ -64,14 +69,19 @@ export function createDemoSegment(input: GenerateInput): Segment {
   const bank = selectBank(input)
   const [segmentTitle, a, b, closing] = bank[input.segmentIndex % bank.length]
   const topic = input.topic.trim() || '今夜の気になること'
-  const cycle = Math.floor(input.segmentIndex / bank.length)
-  const bridge = input.direction === 'continue' ? 'さっきの話をもう一段掘ると' : input.direction === 'next' ? '少し角度を変えると' : cycle ? 'ここまでの話を受けて' : 'まずは'
-  const extra: Line = input.talkBalance > 25 ? { speaker: 'B', text: `${bridge}、「${topic.slice(0, 36)}」から次はどんな景色が見えてきますか？` } : { speaker: 'A', text: `${bridge}、「${topic.slice(0, 36)}」というテーマを整理して眺めてみます。` }
-  const last: Line = input.talkBalance < -25 ? { speaker: 'A', text: `${closing} もう一つだけ、背景も補足しておきます。` } : { speaker: 'B', text: closing }
+  const subject = subjectFromTopic(topic)
+  const isGeneric = bank === banks.chat
+  const lead = input.direction === 'continue' ? 'さっきの話をもう一段掘って' : input.direction === 'next' ? '次の角度から' : '今夜のリクエストは'
+  const question = /どう|なぜ|何|おすすめ|迷|べき|かな/u.test(topic)
+  const first = `${lead}「${topic.slice(0, 90)}」。中心に置くのは「${subject}」です。${isGeneric ? 'まず、気になったきっかけから考えてみましょう。' : a}`
+  const second = isGeneric ? (question ? `答えを急ぐより、「${subject}」で何を大事にしたいかを分けると、自分に合う方向が見えそうですね。` : `「${subject}」の面白さは、知識だけでなく、自分の経験や好みと結びつくところにもありそうです。`) : b
+  const third = isGeneric ? `たとえば「${subject}」の良いところ、気になるところ、これから試したいこと。この三つに分けると話が具体的になります。` : `「${subject}」という視点で見ると、${closing}`
+  const fourth = `ではこのあとも、「${subject}」から離れずに、具体的なポイントを一つずつ拾っていきましょう。`
+  const lines: Line[] = [{ speaker: 'A', text: first }, { speaker: 'B', text: second }, { speaker: input.talkBalance > 25 ? 'B' : 'A', text: third }, { speaker: input.talkBalance < -25 ? 'A' : 'B', text: fourth }]
   return {
     programTitle: /f1/i.test(topic) ? 'F1 NIGHT TALK' : input.mode === 'late-night' ? 'MIDNIGHT LETTERS' : 'YOUR NIGHT FREQUENCY',
     segmentTitle,
     mood: input.mood,
-    lines: [{ speaker: 'A', text: a }, { speaker: 'B', text: b }, extra, last],
+    lines,
   }
 }

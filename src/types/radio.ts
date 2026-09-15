@@ -24,6 +24,7 @@ export interface RadioSettings {
   mood: string
   voiceA: string
   voiceB: string
+  voiceSelectionVersion: number
   djVolume: number
   bgmVolume: number
   jingleVolume: number
@@ -36,7 +37,7 @@ export interface RadioSettings {
 }
 
 export const defaultSettings: RadioSettings = {
-  topic: 'F1について、ゆるく話して', mode: 'free-talk', mood: 'relaxed', voiceA: '', voiceB: '',
+  topic: 'F1について、ゆるく話して', mode: 'free-talk', mood: 'relaxed', voiceA: '', voiceB: '', voiceSelectionVersion: 2,
   djVolume: 0.9, bgmVolume: 0.22, jingleVolume: 0.45, talkBalance: 0, workerUrl: '', provider: 'auto',
   rssUrl: '', recentTopics: [], favorites: [],
 }
