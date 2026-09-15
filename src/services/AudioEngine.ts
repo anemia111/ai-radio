@@ -16,11 +16,23 @@ export class AudioEngine {
 
   private startGeneratedBed() {
     if (!this.context || !this.master) return
-    ;[110, 164.81, 220].forEach((frequency, index) => {
-      const oscillator = this.context!.createOscillator(); const gain = this.context!.createGain()
-      oscillator.type = index === 1 ? 'triangle' : 'sine'; oscillator.frequency.value = frequency; gain.gain.value = index === 0 ? .38 : .13
-      oscillator.connect(gain).connect(this.master!); oscillator.start(); this.sources.push(oscillator)
-    })
+    const sampleRate = this.context.sampleRate; const duration = 16; const length = sampleRate * duration
+    const buffer = this.context.createBuffer(2, length, sampleRate)
+    const chords = [[110, 164.81, 220], [87.31, 130.81, 174.61], [130.81, 164.81, 196], [98, 146.83, 196]]
+    const melody = [220, 261.63, 329.63, 293.66, 261.63, 220, 196, 246.94]
+    for (let channel = 0; channel < 2; channel += 1) {
+      const data = buffer.getChannelData(channel); const stereoPhase = channel * .7
+      for (let index = 0; index < length; index += 1) {
+        const time = index / sampleRate; const barTime = time % 4; const chord = chords[Math.floor(time / 4) % chords.length]
+        const padEnvelope = Math.min(1, barTime / .7, (4 - barTime) / .7)
+        const pad = chord.reduce((sum, frequency, voice) => sum + Math.sin(2 * Math.PI * frequency * time + stereoPhase * voice) / (voice + 1), 0) * .075 * padEnvelope
+        const beatTime = time % .5; const note = melody[Math.floor(time / .5) % melody.length]
+        const pluck = Math.sin(2 * Math.PI * note * time + stereoPhase) * Math.exp(-beatTime * 7) * .045
+        const pulse = Math.sin(2 * Math.PI * 55 * time) * Math.exp(-(time % 2) * 10) * .025
+        data[index] = pad + pluck + pulse
+      }
+    }
+    const source = this.context.createBufferSource(); source.buffer = buffer; source.loop = true; source.connect(this.master); source.start(); this.sources.push(source)
   }
 
   async start(volume: number, baseUrl: string) {
@@ -40,12 +52,12 @@ export class AudioEngine {
       if (bgmBuffer) { const source = this.context.createBufferSource(); source.buffer = bgmBuffer; source.loop = true; source.connect(this.master); source.start(); this.sources.push(source) }
       else this.startGeneratedBed()
     } catch { this.startGeneratedBed() }
-    this.master.gain.linearRampToValueAtTime(this.volume * .12, this.context.currentTime + 1.4)
+    this.master.gain.linearRampToValueAtTime(this.volume * .42, this.context.currentTime + 1.4)
   }
 
   setBgmVolume(value: number, ducked = false) {
     this.volume = value; if (!this.context || !this.master) return
-    const target = value * .12 * (ducked ? .3 : 1); this.master.gain.cancelScheduledValues(this.context.currentTime); this.master.gain.linearRampToValueAtTime(target, this.context.currentTime + .42)
+    const target = value * .42 * (ducked ? .45 : 1); this.master.gain.cancelScheduledValues(this.context.currentTime); this.master.gain.linearRampToValueAtTime(target, this.context.currentTime + .42)
   }
   duck(active: boolean) { this.setBgmVolume(this.volume, active) }
   playJingle(volume: number) {
