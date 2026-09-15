@@ -1,9 +1,11 @@
 name = "ai-radio-worker"
 main = "src/index.ts"
 compatibility_date = "2026-09-15"
+workers_dev = true
+preview_urls = false
 
 [vars]
-AI_PROVIDER = "groq"
+AI_PROVIDER = "gemini"
 ALLOWED_ORIGINS = "https://anemia111.github.io,http://localhost:5173,http://127.0.0.1:5173"
 RSS_ALLOWED_HOSTS = ""
 
